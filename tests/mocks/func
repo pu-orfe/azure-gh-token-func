@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Mock Azure Functions Core Tools for testing
+
+if [[ "$1" == "azure" && "$2" == "functionapp" && "$3" == "publish" ]]; then
+    APP_NAME="$4"
+    echo "Getting site publishing info..."
+    echo "Creating archive for current directory..."
+    echo "Performing remote build for functions project."
+    echo "Remote build succeeded!"
+    echo "Syncing triggers..."
+    echo "Functions in $APP_NAME:"
+    echo "    GetGitHubToken - [httpTrigger]"
+    echo "        Invoke url: https://$APP_NAME.azurewebsites.net/api/getgithubtoken"
+elif [[ "$1" == "--version" ]]; then
+    echo "4.0.0"
+else
+    echo "Mock func: Unknown command $*" >&2
+    exit 1
+fi

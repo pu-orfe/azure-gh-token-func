@@ -1,0 +1,209 @@
+#!/bin/bash
+
+# Mock Azure CLI for testing
+# Simulates az commands without making real API calls
+
+MOCK_STATE_DIR="${MOCK_STATE_DIR:-/tmp/az-mock-state}"
+mkdir -p "$MOCK_STATE_DIR"
+
+# Parse the command
+CMD="$1"
+shift
+
+case "$CMD" in
+    account)
+        if [[ "$1" == "show" ]]; then
+            echo '{"name": "test-subscription", "id": "00000000-0000-0000-0000-000000000000"}'
+        fi
+        ;;
+
+    group)
+        if [[ "$1" == "show" ]]; then
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name) RG_NAME="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+            if [[ -f "$MOCK_STATE_DIR/rg_$RG_NAME" ]]; then
+                echo "{\"name\": \"$RG_NAME\", \"location\": \"eastus\"}"
+            else
+                echo "ERROR: Resource group '$RG_NAME' could not be found." >&2
+                exit 3
+            fi
+        elif [[ "$1" == "create" ]]; then
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name) RG_NAME="$2"; shift 2 ;;
+                    --location) LOCATION="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+            touch "$MOCK_STATE_DIR/rg_$RG_NAME"
+            echo "{\"name\": \"$RG_NAME\", \"location\": \"$LOCATION\"}"
+        elif [[ "$1" == "list" ]]; then
+            echo '["test-resource-group"]'
+        fi
+        ;;
+
+    storage)
+        if [[ "$1" == "account" ]]; then
+            shift
+            if [[ "$1" == "create" ]]; then
+                shift
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --name) STORAGE_NAME="$2"; shift 2 ;;
+                        --resource-group) RG_NAME="$2"; shift 2 ;;
+                        --location) LOCATION="$2"; shift 2 ;;
+                        *) shift ;;
+                    esac
+                done
+                touch "$MOCK_STATE_DIR/storage_$STORAGE_NAME"
+                echo "{\"name\": \"$STORAGE_NAME\", \"location\": \"$LOCATION\", \"provisioningState\": \"Succeeded\"}"
+            elif [[ "$1" == "show" ]]; then
+                shift
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --name) STORAGE_NAME="$2"; shift 2 ;;
+                        *) shift ;;
+                    esac
+                done
+                if [[ -f "$MOCK_STATE_DIR/storage_$STORAGE_NAME" ]]; then
+                    echo "{\"name\": \"$STORAGE_NAME\"}"
+                else
+                    exit 3
+                fi
+            elif [[ "$1" == "delete" ]]; then
+                shift
+                while [[ $# -gt 0 ]]; do
+                    case "$1" in
+                        --name) STORAGE_NAME="$2"; shift 2 ;;
+                        --yes) shift ;;
+                        *) shift ;;
+                    esac
+                done
+                rm -f "$MOCK_STATE_DIR/storage_$STORAGE_NAME"
+            fi
+        fi
+        ;;
+
+    functionapp)
+        if [[ "$1" == "create" ]]; then
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name) APP_NAME="$2"; shift 2 ;;
+                    --resource-group) RG_NAME="$2"; shift 2 ;;
+                    --storage-account) STORAGE="$2"; shift 2 ;;
+                    --flexconsumption-location) LOCATION="$2"; shift 2 ;;
+                    --runtime) RUNTIME="$2"; shift 2 ;;
+                    --runtime-version) VERSION="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+            echo "{\"DEPLOYMENT_STORAGE_CONNECTION_STRING\": \"DefaultEndpointsProtocol=https;AccountName=$STORAGE;AccountKey=fake\"}" > "$MOCK_STATE_DIR/app_${APP_NAME}_settings"
+            touch "$MOCK_STATE_DIR/app_$APP_NAME"
+            echo "{\"name\": \"$APP_NAME\", \"defaultHostName\": \"$APP_NAME.azurewebsites.net\", \"sku\": \"FlexConsumption\"}"
+        elif [[ "$1" == "show" ]]; then
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name) APP_NAME="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+            if [[ -f "$MOCK_STATE_DIR/app_$APP_NAME" ]]; then
+                echo "{\"name\": \"$APP_NAME\", \"defaultHostName\": \"$APP_NAME.azurewebsites.net\"}"
+            else
+                exit 3
+            fi
+        elif [[ "$1" == "delete" ]]; then
+            shift
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name) APP_NAME="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+            rm -f "$MOCK_STATE_DIR/app_$APP_NAME"
+            rm -f "$MOCK_STATE_DIR/app_${APP_NAME}_settings"
+        elif [[ "$1" == "config" ]]; then
+            shift
+            if [[ "$1" == "appsettings" ]]; then
+                shift
+                if [[ "$1" == "set" ]]; then
+                    shift
+                    while [[ $# -gt 0 ]]; do
+                        case "$1" in
+                            --name) APP_NAME="$2"; shift 2 ;;
+                            --settings) shift; break ;;
+                            --output) shift 2 ;;
+                            *) shift ;;
+                        esac
+                    done
+                    # Store settings
+                    for setting in "$@"; do
+                        KEY="${setting%%=*}"
+                        VALUE="${setting#*=}"
+                        echo "$KEY=$VALUE" >> "$MOCK_STATE_DIR/app_${APP_NAME}_settings"
+                    done
+                    echo '[{"name": "setting", "value": "value"}]'
+                elif [[ "$1" == "list" ]]; then
+                    shift
+                    while [[ $# -gt 0 ]]; do
+                        case "$1" in
+                            --name) APP_NAME="$2"; shift 2 ;;
+                            --query) shift 2 ;;
+                            *) shift ;;
+                        esac
+                    done
+                    if [[ -f "$MOCK_STATE_DIR/app_${APP_NAME}_settings" ]]; then
+                        STORAGE=$(grep "DEPLOYMENT_STORAGE_CONNECTION_STRING" "$MOCK_STATE_DIR/app_${APP_NAME}_settings" | cut -d= -f2-)
+                        echo "$STORAGE"
+                    fi
+                fi
+            fi
+        elif [[ "$1" == "keys" ]]; then
+            shift
+            if [[ "$1" == "list" ]]; then
+                echo '{"functionKeys": {"default": "test-function-key-12345"}}'
+            fi
+        elif [[ "$1" == "list-flexconsumption-locations" ]]; then
+            echo '[{"name": "eastus"}, {"name": "westus"}, {"name": "canadacentral"}]'
+        fi
+        ;;
+
+    monitor)
+        if [[ "$1" == "app-insights" ]]; then
+            shift
+            if [[ "$1" == "component" ]]; then
+                shift
+                if [[ "$1" == "show" ]]; then
+                    shift
+                    while [[ $# -gt 0 ]]; do
+                        case "$1" in
+                            --app) APP_NAME="$2"; shift 2 ;;
+                            *) shift ;;
+                        esac
+                    done
+                    if [[ -f "$MOCK_STATE_DIR/app_$APP_NAME" ]]; then
+                        echo "$APP_NAME"
+                    else
+                        exit 3
+                    fi
+                elif [[ "$1" == "delete" ]]; then
+                    # Just succeed
+                    :
+                fi
+            fi
+        fi
+        ;;
+
+    *)
+        echo "Mock: Unknown command $CMD" >&2
+        exit 1
+        ;;
+esac

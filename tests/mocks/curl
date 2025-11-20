@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Mock curl for testing
+# Returns a fake GitHub token
+
+for arg in "$@"; do
+    if [[ "$arg" == *"getgithubtoken"* ]]; then
+        echo "ghs_MockTestToken1234567890abcdefghijk"
+        exit 0
+    fi
+done
+
+echo "Mock curl: Unknown request" >&2
+exit 1
