@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build test container
         run: docker build -t gh-trigger-tests -f tests/Dockerfile .
