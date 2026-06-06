@@ -4,5 +4,5 @@
 
 azure-functions
 PyJWT==2.8.0
-cryptography==42.0.5
+cryptography==46.0.7
 requests==2.32.0
