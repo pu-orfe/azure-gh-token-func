@@ -1,6 +1,6 @@
 FROM alpine:3.19
 
-RUN apk add --no-cache bash grep
+RUN apk add --no-cache bash grep openssl
 
 WORKDIR /app
 

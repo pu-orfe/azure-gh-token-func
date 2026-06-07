@@ -18,12 +18,7 @@ touch "$MOCK_STATE_DIR/rg_test-rg"
 
 # Create a temporary private key file
 TEST_PEM=$(mktemp)
-cat > "$TEST_PEM" << 'EOF'
------BEGIN RSA PRIVATE KEY-----
-MIIBOgIBAAJBALRiMLAaH+7S4P3LsWp0iYLzD8Y5PZ7c4wz0kYfHEd6W+Yxk5S4n
-FakeKeyForTestingOnlyNotARealKey123456789012345678901234567890
------END RSA PRIVATE KEY-----
-EOF
+openssl genrsa 1024 > "$TEST_PEM" 2>/dev/null
 
 echo "============================================"
 echo "  Testing Deploy Script"
