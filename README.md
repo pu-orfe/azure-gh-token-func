@@ -8,7 +8,7 @@ An Azure Function that generates GitHub App installation access tokens. Use this
 
 - Azure CLI installed and authenticated (`az login`)
 - Azure Functions Core Tools v4+ (`func --version`)
-- Python 3.11
+- Python 3.13
 - A GitHub App with appropriate permissions
 
 ### 1. Create a GitHub App
@@ -83,7 +83,7 @@ az functionapp create \
   --storage-account $STORAGE_ACCOUNT \
   --flexconsumption-location $LOCATION \
   --runtime python \
-  --runtime-version 3.11
+  --runtime-version 3.13
 
 # Set environment variables
 PRIVATE_KEY=$(cat path/to/your-private-key.pem)
@@ -244,6 +244,6 @@ There's no in-place migration path - Flex Consumption requires a new app.
 - Check deployment succeeded: `func azure functionapp publish` should show the function URL
 
 ### Local development issues
-- Verify Python 3.11 is installed
+- Verify Python 3.13 is installed
 - Check Azure Functions Core Tools v4+: `func --version`
 - Ensure virtual environment is activated
