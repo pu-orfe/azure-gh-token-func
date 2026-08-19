@@ -111,7 +111,7 @@ else
         --storage-account "$STORAGE_ACCOUNT" \
         --flexconsumption-location "$LOCATION" \
         --runtime python \
-        --runtime-version 3.11
+        --runtime-version 3.13
     echo "Function app created."
 fi
 
