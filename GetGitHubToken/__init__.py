@@ -26,7 +26,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.info(f"App ID: {app_id}")
         logging.info(f"Installation ID: {installation_id}")
         logging.info(f"Private key length: {len(private_key)}")
-        logging.info(f"Private key starts with: {private_key[:30]}")
+        logging.info(f"Private key PEM header detected: {private_key.lstrip().startswith('-----BEGIN')}")
 
         now = datetime.datetime.now(datetime.timezone.utc)
         payload = {
@@ -48,7 +48,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         headers = {"Authorization": f"Bearer {jwt_token}", "Accept": "application/vnd.github+json"}
         logging.info(f"POSTing to GitHub API: {url}")
         try:
-            r = requests.post(url, headers=headers)
+            r = requests.post(url, headers=headers, timeout=10)
             r.raise_for_status()
         except Exception as api_error:
             logging.error(f"GitHub API error: {api_error}")

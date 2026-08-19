@@ -1,0 +1,24 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build test container
+        run: docker build -t gh-token-pytests -f tests/Dockerfile.python .
+
+      - name: Run unit tests
+        run: docker run --rm gh-token-pytests
