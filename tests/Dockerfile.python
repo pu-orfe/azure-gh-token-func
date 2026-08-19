@@ -2,7 +2,7 @@
 # Build from the repository root:
 #   docker build -t gh-token-pytests -f tests/Dockerfile.python .
 #   docker run --rm gh-token-pytests
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
