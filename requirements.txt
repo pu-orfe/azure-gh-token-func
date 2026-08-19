@@ -2,7 +2,7 @@
 # Ref: aka.ms/functions-azure-monitor-python 
 # azure-monitor-opentelemetry 
 
-azure-functions==1.25.0
+azure-functions==2.2.0
 PyJWT==2.13.0
 cryptography==50.0.0
 requests==2.34.2
