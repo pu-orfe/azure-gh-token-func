@@ -4,3 +4,16 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  # Tracks requirements.txt. Without this, pip PRs only ever arrive from
+  # security alerts, so routine version updates are never proposed.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Tracks the test container base image (tests/Dockerfile).
+  - package-ecosystem: "docker"
+    directory: "/tests"
+    schedule:
+      interval: "weekly"
