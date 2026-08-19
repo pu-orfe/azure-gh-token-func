@@ -2,7 +2,11 @@
 # Build from the repository root:
 #   docker build -t gh-token-pytests -f tests/Dockerfile.python .
 #   docker run --rm gh-token-pytests
-FROM python:3.12-slim
+# Tracks scripts/deploy.sh --runtime-version so the suite runs on the same
+# interpreter as production. The azure-functions pin in requirements.txt is
+# what actually keeps the SDK version from drifting with the interpreter --
+# unpinned, 3.13+ resolves to 2.x, which cannot install on the 3.11 runtime.
+FROM python:3.11-slim
 
 WORKDIR /app
 
