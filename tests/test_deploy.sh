@@ -10,15 +10,28 @@ MOCK_DIR="$SCRIPT_DIR/mocks"
 export PATH="$MOCK_DIR:$PATH"
 export MOCK_STATE_DIR=$(mktemp -d)
 
+# Cleanup on ANY exit, not just the happy path: `set -e` means a failed
+# assertion above skips the teardown at the bottom of the script and leaves
+# the mock state dir and the generated key behind.
+cleanup() {
+    rm -rf "$MOCK_STATE_DIR"
+    [[ -n "${TEST_PEM:-}" ]] && rm -f "$TEST_PEM"
+    return 0
+}
+trap cleanup EXIT
+
 # Make mocks executable
 chmod +x "$MOCK_DIR/az" "$MOCK_DIR/func" "$MOCK_DIR/curl"
 
 # Create test resource group
 touch "$MOCK_STATE_DIR/rg_test-rg"
 
-# Create a temporary private key file
+# Throwaway key, generated per run so nothing key-shaped is ever committed.
+# 2048 bits to match what GitHub issues for App private keys - 1024 is below
+# what current tooling accepts, so a smaller key would make this test pass
+# against input production would reject.
 TEST_PEM=$(mktemp)
-openssl genrsa 1024 > "$TEST_PEM" 2>/dev/null
+openssl genrsa -out "$TEST_PEM" 2048 2>/dev/null
 
 echo "============================================"
 echo "  Testing Deploy Script"
@@ -85,9 +98,6 @@ else
     fi
 fi
 
-# Cleanup
-rm -rf "$MOCK_STATE_DIR"
-rm -f "$TEST_PEM"
 
 echo ""
 if [[ $ERRORS -eq 0 ]]; then
