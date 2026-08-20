@@ -10,6 +10,9 @@ MOCK_DIR="$SCRIPT_DIR/mocks"
 export PATH="$MOCK_DIR:$PATH"
 export MOCK_STATE_DIR=$(mktemp -d)
 
+# See test_deploy.sh: teardown has to survive an early `set -e` exit.
+trap 'rm -rf "$MOCK_STATE_DIR"' EXIT
+
 # Make mocks executable
 chmod +x "$MOCK_DIR/az" "$MOCK_DIR/func" "$MOCK_DIR/curl"
 
@@ -54,8 +57,6 @@ else
     echo "PASS: Storage account deleted"
 fi
 
-# Cleanup
-rm -rf "$MOCK_STATE_DIR"
 
 echo ""
 if [[ $ERRORS -eq 0 ]]; then
