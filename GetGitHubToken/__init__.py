@@ -25,7 +25,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
         logging.info(f"App ID: {app_id}")
         logging.info(f"Installation ID: {installation_id}")
-        logging.info(f"Private key length: {len(private_key)}")
         logging.info(f"Private key PEM header detected: {private_key.lstrip().startswith('-----BEGIN')}")
 
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -53,9 +52,18 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         except Exception as api_error:
             logging.error(f"GitHub API error: {api_error}")
             return func.HttpResponse("GitHub API error", status_code=500)
-        token = r.json().get("token")
+        payload_json = r.json()
+        token = payload_json.get("token")
         if not token:
-            logging.error(f"No token found in GitHub response: {r.text}")
+            # Log the response's SHAPE, never its contents. This endpoint returns
+            # an installation access token, so dumping the body would write a live
+            # credential into Application Insights the moment the shape surprises
+            # us - which is exactly when someone would go looking at the logs.
+            logging.error(
+                "No token in GitHub response (status=%s, fields=%s)",
+                getattr(r, "status_code", "unknown"),
+                sorted(payload_json.keys()),
+            )
             return func.HttpResponse("No token in response", status_code=500)
 
         logging.info("GitHub token successfully retrieved")

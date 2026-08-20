@@ -55,10 +55,11 @@ def configured_env(monkeypatch, private_key_pem):
 class FakeResponse:
     """Stand-in for requests.Response."""
 
-    def __init__(self, payload=None, error=None, text=""):
+    def __init__(self, payload=None, error=None, text="", status_code=200):
         self._payload = payload if payload is not None else {}
         self._error = error
         self.text = text or json.dumps(self._payload)
+        self.status_code = status_code
 
     def raise_for_status(self):
         if self._error:
@@ -177,6 +178,50 @@ def test_private_key_material_is_never_logged(
         assert line not in logged
         # Also catch a truncated prefix of the first key line being logged.
         assert line[:8] not in logged
+
+
+def test_github_response_body_is_never_logged(
+    module, configured_env, request_obj, monkeypatch, caplog
+):
+    """The access-token endpoint's body must not reach the logs.
+
+    The no-token branch previously logged r.text verbatim. That branch fires
+    precisely when the response shape is unexpected - so a body that still
+    carried a credential would be written straight into Application Insights.
+    """
+    secret = "ghs_liveCredentialThatMustNotBeLogged"
+    payload = {"tokens": [secret], "expires_at": "2026-01-01T00:00:00Z"}
+    monkeypatch.setattr(
+        module.requests, "post", lambda *a, **k: FakeResponse(payload, status_code=201)
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        response = module.main(request_obj)
+
+    assert response.status_code == 500
+    assert body(response) == "No token in response"
+
+    logged = "\n".join(record.getMessage() for record in caplog.records)
+    assert secret not in logged
+    assert json.dumps(payload) not in logged
+    # The shape is still reported, so the log stays useful for diagnosis.
+    assert "expires_at" in logged
+    assert "tokens" in logged
+    assert "201" in logged
+
+
+def test_private_key_length_is_not_logged(
+    module, configured_env, request_obj, monkeypatch, caplog, private_key_pem
+):
+    """Key length is metadata about the signing key; it has no diagnostic value."""
+    monkeypatch.setattr(
+        module.requests, "post", lambda *a, **k: FakeResponse({"token": "ghs_x"})
+    )
+    with caplog.at_level(logging.DEBUG):
+        assert module.main(request_obj).status_code == 200
+
+    logged = "\n".join(record.getMessage() for record in caplog.records)
+    assert str(len(private_key_pem)) not in logged
 
 
 def test_github_request_has_timeout(module, configured_env, request_obj, monkeypatch):
