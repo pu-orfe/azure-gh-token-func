@@ -3,6 +3,6 @@
 # azure-monitor-opentelemetry 
 
 azure-functions==2.3.0
-PyJWT==2.13.0
+PyJWT==2.14.0
 cryptography==50.0.1
 requests==2.34.2
