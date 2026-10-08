@@ -56,6 +56,7 @@ Run the deployment script which will prompt for all required information:
 The script will:
 - Collect configuration (function name, resource group, GitHub App details)
 - Create the storage account and function app
+- On an existing function app, update the runtime to Python 3.13 if it is on an older version (Flex Consumption only; other plans stop with a pointer to [migration](#migrating-existing-apps-to-flex-consumption))
 - Set environment variables
 - Deploy the code
 - Test the function and display the URL
@@ -94,6 +95,13 @@ az functionapp config appsettings set \
     "GITHUB_APP_ID=your-app-id" \
     "GITHUB_INSTALLATION_ID=your-installation-id" \
     "GITHUB_PRIVATE_KEY=$PRIVATE_KEY"
+
+# Redeploying to an app created on an older Python? Update its runtime first -
+# this code needs 3.13, and publishing to an older runtime fails at the worker.
+# az functionapp runtime config set \
+#   --name $FUNCTION_APP_NAME \
+#   --resource-group $RESOURCE_GROUP \
+#   --runtime-version 3.13
 
 # Deploy the function code
 func azure functionapp publish $FUNCTION_APP_NAME --python

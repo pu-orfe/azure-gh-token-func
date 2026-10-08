@@ -4,6 +4,8 @@
 
 if [[ "$1" == "azure" && "$2" == "functionapp" && "$3" == "publish" ]]; then
     APP_NAME="$4"
+    # Recorded so tests can tell whether publish ran at all.
+    [[ -n "$MOCK_STATE_DIR" ]] && touch "$MOCK_STATE_DIR/published_$APP_NAME"
     echo "Getting site publishing info..."
     echo "Creating archive for current directory..."
     echo "Performing remote build for functions project."

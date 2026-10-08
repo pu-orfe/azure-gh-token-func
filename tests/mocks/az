@@ -106,6 +106,7 @@ case "$CMD" in
             done
             echo "{\"DEPLOYMENT_STORAGE_CONNECTION_STRING\": \"DefaultEndpointsProtocol=https;AccountName=$STORAGE;AccountKey=fake\"}" > "$MOCK_STATE_DIR/app_${APP_NAME}_settings"
             touch "$MOCK_STATE_DIR/app_$APP_NAME"
+            echo "$RUNTIME $VERSION" > "$MOCK_STATE_DIR/app_${APP_NAME}_runtime"
             echo "{\"name\": \"$APP_NAME\", \"defaultHostName\": \"$APP_NAME.azurewebsites.net\", \"sku\": \"FlexConsumption\"}"
         elif [[ "$1" == "show" ]]; then
             shift
@@ -165,6 +166,35 @@ case "$CMD" in
                         echo "$STORAGE"
                     fi
                 fi
+            fi
+        elif [[ "$1" == "runtime" && "$2" == "config" ]]; then
+            # State: app_<name>_runtime holds "<stack> <version>". An app with
+            # app_<name>_legacy is not on Flex Consumption, which the real CLI
+            # rejects for both show and set.
+            SUB="$3"
+            shift 3
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --name) APP_NAME="$2"; shift 2 ;;
+                    --runtime-version) VERSION="$2"; shift 2 ;;
+                    *) shift ;;
+                esac
+            done
+            if [[ -f "$MOCK_STATE_DIR/app_${APP_NAME}_legacy" ]]; then
+                echo "ERROR: This command is only valid for Azure Functions on the FlexConsumption plan." >&2
+                exit 1
+            fi
+            if [[ ! -f "$MOCK_STATE_DIR/app_${APP_NAME}_runtime" ]]; then
+                echo "ERROR: Function app '$APP_NAME' not found." >&2
+                exit 3
+            fi
+            read -r STACK CURRENT < "$MOCK_STATE_DIR/app_${APP_NAME}_runtime"
+            if [[ "$SUB" == "show" ]]; then
+                # Real `-o tsv` of a [name, version] query: one value per line.
+                printf '%s\n%s\n' "$STACK" "$CURRENT"
+            elif [[ "$SUB" == "set" ]]; then
+                echo "$STACK $VERSION" > "$MOCK_STATE_DIR/app_${APP_NAME}_runtime"
+                echo "$VERSION" >> "$MOCK_STATE_DIR/app_${APP_NAME}_runtime_sets"
             fi
         elif [[ "$1" == "keys" ]]; then
             shift
