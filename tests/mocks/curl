@@ -5,7 +5,7 @@
 
 for arg in "$@"; do
     if [[ "$arg" == *"getgithubtoken"* ]]; then
-        echo "ghs_MockTestToken1234567890abcdefghijk"
+        printf "ghs_MockTestToken1234567890abcdefghijk\n200"  # body, then -w "\n%{http_code}"
         exit 0
     fi
 done
