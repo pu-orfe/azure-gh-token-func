@@ -2,6 +2,10 @@
 
 set -e
 
+# Python version the code targets. azure-functions 2.x does not install on
+# 3.11, so an app left on an older runtime fails at the worker after publish.
+PYTHON_VERSION="3.13"
+
 echo "============================================"
 echo "  GitHub Token Function - Azure Deployment"
 echo "============================================"
@@ -104,6 +108,41 @@ echo ""
 echo "--- Creating function app ---"
 if az functionapp show --name "$FUNCTION_APP_NAME" --resource-group "$RESOURCE_GROUP" > /dev/null 2>&1; then
     echo "Function app already exists."
+
+    # `create` sets the runtime, but an existing app keeps whatever it was
+    # provisioned with. Bring it to $PYTHON_VERSION before publishing. Only
+    # Flex Consumption apps can change runtime in place, and the CLI rejects
+    # this command for any other plan.
+    if ! CURRENT_RUNTIME=$(az functionapp runtime config show \
+            --name "$FUNCTION_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[name, version]" -o tsv); then
+        echo "Error: Could not read the runtime of '$FUNCTION_APP_NAME'."
+        echo "If it is not on the Flex Consumption plan, it cannot be updated in place;"
+        echo "see 'Migrating Existing Apps to Flex Consumption' in README.md."
+        exit 1
+    fi
+    # Split on any whitespace: tsv may put the two fields on one row or two.
+    RUNTIME_FIELDS=($CURRENT_RUNTIME)
+    CURRENT_STACK="${RUNTIME_FIELDS[0]:-}"
+    CURRENT_VERSION="${RUNTIME_FIELDS[1]:-}"
+
+    if [[ "$CURRENT_STACK" != "python" ]]; then
+        echo "Error: '$FUNCTION_APP_NAME' runs '$CURRENT_STACK', not python."
+        exit 1
+    fi
+
+    if [[ "$CURRENT_VERSION" == "$PYTHON_VERSION" ]]; then
+        echo "Runtime is already Python $PYTHON_VERSION."
+    else
+        echo "Updating runtime from Python $CURRENT_VERSION to $PYTHON_VERSION..."
+        az functionapp runtime config set \
+            --name "$FUNCTION_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --runtime-version "$PYTHON_VERSION" \
+            --output none
+        echo "Runtime updated."
+    fi
 else
     az functionapp create \
         --name "$FUNCTION_APP_NAME" \
@@ -111,7 +150,7 @@ else
         --storage-account "$STORAGE_ACCOUNT" \
         --flexconsumption-location "$LOCATION" \
         --runtime python \
-        --runtime-version 3.13
+        --runtime-version "$PYTHON_VERSION"
     echo "Function app created."
 fi
 
