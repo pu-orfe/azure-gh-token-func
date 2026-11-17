@@ -6,7 +6,7 @@
 # interpreter as production. azure-functions is pinned in requirements.txt and
 # its 2.x line requires 3.13+, so this image, deploy.sh, and that pin are one
 # coupled decision -- change them together or not at all.
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 WORKDIR /app
 
